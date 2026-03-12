@@ -1,0 +1,22 @@
+{
+  "name": "cekernel-${localWorkspaceFolderBasename}",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind",
+    "source=${localEnv:HOME}/.config/gh,target=/root/.config/gh,type=bind"
+  ],
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "TODO API",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["rust-lang.rust-analyzer"]
+    }
+  }
+}
