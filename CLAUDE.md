@@ -8,26 +8,23 @@ cekernelの実証テスト用リポジトリ。Rust + Axum によるシンプル
 
 ## Development Environment
 
-すべての開発はdevcontainer内で行う。ホストにRustは不要。
+すべての開発はdevcontainer内で行う。ホストには Node.js 24 LTS + pnpm が必要（devcontainer CLI 用）。Rustはコンテナ内に閉じ込める。
 
 ```bash
-# VS Code / DevPod / GitHub Codespaces でdevcontainerを起動
-# ~/.claude と ~/.config/gh がコンテナにマウントされ、claude / gh コマンドが使える
+make setup   # ホスト側: pnpm install (devcontainer CLI)
+make up      # devcontainer 起動
+make test    # コンテナ内で cargo test
+make build   # コンテナ内で cargo build
+make run     # コンテナ内で cargo run (http://0.0.0.0:3000)
+make exec CMD="cargo clippy"  # 任意コマンド実行
 ```
 
-## Build & Test
-
-```bash
-cargo build
-cargo test
-cargo test <test_name>     # 単一テスト実行 例: cargo test test_create
-cargo run                  # http://0.0.0.0:3000 でサーバー起動
-```
+git worktreeで複数コンテナを同時起動可能。コンテナ名は `cekernel-<フォルダ名>` で一意になる。
 
 ## Architecture
 
 - **Framework**: Axum 0.7（軽量Web）+ SQLite（sqlx async）
-- **エントリポイント**: `src/main.rs` — DB接続・サーバー起動
+- **エントリポイント**: `src/main.rs` — DB接続・サーバー起動（`PORT` 環境変数でポート指定可）
 - **ビジネスロジック**: `src/lib.rs` — ルーター、ハンドラ、モデル、テストすべてを含む
 - **DB**: SQLite ファイル (`todos.db`)。コンテナ内でのみ存在し、gitignore済み。マイグレーションは `setup_db()` でアプリ起動時に実行
 - **テスト**: `src/lib.rs` 内の `#[cfg(test)]` モジュール。`sqlite::memory:` を使うためDBファイル不要

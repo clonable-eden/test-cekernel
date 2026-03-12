@@ -12,8 +12,5 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && apt-get update && apt-get install -y gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Node.js + Claude Code
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
-    && npm install -g @anthropic-ai/claude-code \
-    && rm -rf /var/lib/apt/lists/*
+# Claude Code (native installer)
+RUN curl -fsSL https://claude.ai/install.sh | bash
