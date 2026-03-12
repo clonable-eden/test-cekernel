@@ -1,7 +1,7 @@
-FROM rust:1.84-slim-bookworm
+FROM rust:1.94-slim-bookworm
 
 RUN apt-get update && apt-get install -y \
-    pkg-config libssl-dev curl git sqlite3 \
+    pkg-config libssl-dev curl git sqlite3 procps \
     && rm -rf /var/lib/apt/lists/*
 
 # gh CLI
