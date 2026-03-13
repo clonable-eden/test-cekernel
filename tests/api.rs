@@ -1,6 +1,5 @@
 use axum::body::Body;
-use axum::http::{Method, Request};
-use axum::http::StatusCode;
+use axum::http::{Method, Request, StatusCode};
 use axum::Router;
 use http_body_util::BodyExt;
 use sqlx::SqlitePool;
