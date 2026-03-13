@@ -28,7 +28,7 @@ pub fn app(pool: SqlitePool) -> Router {
     Router::new()
         .route("/todos", get(list_todos).post(create_todo))
         .route(
-            "/todos/:id",
+            "/todos/{id}",
             axum::routing::patch(update_todo).delete(delete_todo),
         )
         .with_state(state)
