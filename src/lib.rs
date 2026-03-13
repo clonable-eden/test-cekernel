@@ -4,7 +4,7 @@ pub mod models;
 pub use handlers::AppState;
 pub use models::{CreateTodo, Todo, UpdateTodo};
 
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 use sqlx::SqlitePool;
 use std::sync::Arc;
 

@@ -1,5 +1,5 @@
-use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::SqlitePool;
+use sqlx::sqlite::SqliteConnectOptions;
 use std::str::FromStr;
 use test_cekernel::{app, setup_db};
 
