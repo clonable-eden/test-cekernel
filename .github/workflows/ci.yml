@@ -13,7 +13,7 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      src: ${{ steps.filter.outputs.src_any_modified }}
+      src: ${{ steps.filter.outputs.any_modified }}
     steps:
       - uses: actions/checkout@v4
       - uses: tj-actions/changed-files@v47
