@@ -10,7 +10,26 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      src: ${{ steps.filter.outputs.any_modified }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: tj-actions/changed-files@v47
+        id: filter
+        with:
+          files: |
+            src/**
+            tests/**
+            Cargo.*
+            dev.mk
+            Makefile
+            .github/workflows/**
+
   check:
+    needs: changes
+    if: needs.changes.outputs.src == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,3 +51,13 @@ jobs:
 
       - name: build
         run: cargo build --release
+
+  gate:
+    needs: check
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          if [ "${{ needs.check.result }}" = "failure" ]; then
+            exit 1
+          fi
