@@ -1,6 +1,21 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["patch", "minor", "pin"],
+      "automerge": true
+    },
+    {
+      "matchManagers": ["cargo"],
+      "groupName": "Rust dependencies"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    }
   ]
 }
