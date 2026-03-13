@@ -134,9 +134,7 @@ mod tests {
         app(pool)
     }
 
-    async fn body_json<T: serde::de::DeserializeOwned>(
-        response: axum::response::Response,
-    ) -> T {
+    async fn body_json<T: serde::de::DeserializeOwned>(response: axum::response::Response) -> T {
         let body = response.into_body().collect().await.unwrap().to_bytes();
         serde_json::from_slice(&body).unwrap()
     }
