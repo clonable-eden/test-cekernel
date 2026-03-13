@@ -6,6 +6,10 @@
   ],
   "packageRules": [
     {
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true
+    },
+    {
       "matchManagers": ["cargo"],
       "groupName": "Rust dependencies"
     },
