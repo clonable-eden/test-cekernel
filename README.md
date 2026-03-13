@@ -1,6 +1,6 @@
 # test-cekernel
 
-[cekernel](https://github.com/clonable-eden/plugins) の実証テスト用リポジトリ。Rust + Axum によるシンプルな TODO リスト REST API。
+[cekernel](https://github.com/clonable-eden/cekernel) の実証テスト用リポジトリ。Rust + Axum によるシンプルな TODO リスト REST API。
 
 ## Setup
 
