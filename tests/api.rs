@@ -1,11 +1,11 @@
+use axum::Router;
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
-use axum::Router;
 use http_body_util::BodyExt;
 use sqlx::SqlitePool;
 use tower::ServiceExt;
 
-use test_cekernel::{app, setup_db, Todo};
+use test_cekernel::{Todo, app, setup_db};
 
 async fn test_app() -> Router {
     let pool = SqlitePool::connect("sqlite::memory:")
