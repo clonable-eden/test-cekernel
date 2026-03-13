@@ -20,5 +20,7 @@ async fn main() {
         .await
         .expect("Failed to bind");
     println!("Listening on http://{addr}");
-    axum::serve(listener, app(pool)).await.expect("Server failed");
+    axum::serve(listener, app(pool))
+        .await
+        .expect("Server failed");
 }
