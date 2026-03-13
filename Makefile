@@ -2,7 +2,7 @@ DEVCONTAINER = pnpm exec devcontainer
 WORKSPACE = --workspace-folder .
 DEV = $(DEVCONTAINER) exec $(WORKSPACE) make -f dev.mk
 
-.PHONY: help setup up down rebuild test build run stop clean port shell exec
+.PHONY: help setup up down rebuild fmt lint check ci test build run stop clean port shell exec
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -24,6 +24,18 @@ down: ## Stop and remove devcontainer
 
 rebuild: down ## Rebuild and start devcontainer from scratch
 	$(DEVCONTAINER) up $(WORKSPACE) --build-no-cache
+
+fmt: up ## Format code (delegates to dev.mk)
+	$(DEV) fmt
+
+lint: up ## Run clippy (delegates to dev.mk)
+	$(DEV) lint
+
+check: up ## Full check: format → lint → test (delegates to dev.mk)
+	$(DEV) check
+
+ci: up ## Reproduce CI locally (delegates to dev.mk)
+	$(DEV) ci
 
 test: up ## Run tests (delegates to dev.mk)
 	$(DEV) test
