@@ -1,6 +1,6 @@
 PORT ?= 3000
 
-.PHONY: help fmt lint check ci test build run stop clean
+.PHONY: help fmt fmt-check lint check ci test build build-release run stop clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -8,22 +8,24 @@ help: ## Show this help
 fmt: ## Format code
 	cargo fmt
 
+fmt-check: ## Check formatting (no auto-fix)
+	cargo fmt --check
+
 lint: ## Run clippy
 	cargo clippy -- -D warnings
 
 check: fmt lint test ## Full check (format → lint → test)
 
-ci: ## Reproduce CI locally (no auto-fix)
-	cargo fmt --check
-	cargo clippy -- -D warnings
-	cargo test
-	cargo build --release
+ci: fmt-check lint test build-release ## Reproduce CI locally (no auto-fix)
 
 test: ## Run tests
 	cargo test
 
 build: ## Build the project
 	cargo build
+
+build-release: ## Build in release mode
+	cargo build --release
 
 run: ## Start server in background
 	@cargo run &
