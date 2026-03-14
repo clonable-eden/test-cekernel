@@ -40,17 +40,17 @@ jobs:
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
-      - name: fmt
-        run: cargo fmt --check
+      - name: fmt-check
+        run: make -f dev.mk fmt-check
 
-      - name: clippy
-        run: cargo clippy -- -D warnings
+      - name: lint
+        run: make -f dev.mk lint
 
       - name: test
-        run: cargo test
+        run: make -f dev.mk test
 
       - name: build
-        run: cargo build --release
+        run: make -f dev.mk build-release
 
   gate:
     needs: check
