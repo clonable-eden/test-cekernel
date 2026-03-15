@@ -14,18 +14,7 @@ make run     # サーバー起動 (http://localhost:3000)
 
 ## Make Targets
 
-| Target | Description |
-|--------|-------------|
-| `make setup` | ホスト依存関係インストール |
-| `make up` | devcontainer 起動 |
-| `make down` | devcontainer 停止 |
-| `make test` | テスト実行 |
-| `make build` | ビルド |
-| `make run` | サーバー起動 |
-| `make fmt` | コード整形 (`cargo fmt`) |
-| `make lint` | lint (`cargo clippy`) |
-| `make check` | fmt → lint → test 一括実行 |
-| `make ci` | CI 再現 (fmt --check → clippy → test → build --release) |
+全ターゲットの一覧は `make help` で確認できる。
 
 ## API
 
