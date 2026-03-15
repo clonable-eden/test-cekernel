@@ -11,16 +11,23 @@ cekernelの実証テスト用リポジトリ。Rust + Axum によるシンプル
 すべての開発はdevcontainer内で行う。ホストには Node.js 24 LTS + pnpm が必要（devcontainer CLI 用）。Rustはコンテナ内に閉じ込める。
 
 ```bash
-make setup   # ホスト側: pnpm install (devcontainer CLI)
-make up      # devcontainer 起動
-make test    # コンテナ内で cargo test
-make build   # コンテナ内で cargo build
-make run     # コンテナ内で cargo run (http://0.0.0.0:3000)
-make fmt     # コード整形 (cargo fmt)
-make lint    # clippy チェック
-make check   # fmt → lint → test 一括実行
-make ci      # CI 再現 (fmt --check → clippy → test → build --release)
-make down    # devcontainer 停止
+make help      # ターゲット一覧を表示
+make setup     # ホスト側: pnpm install (devcontainer CLI)
+make up        # devcontainer 起動（起動済みならスキップ）
+make down      # devcontainer 停止・削除
+make rebuild   # devcontainer を再ビルドして起動
+make fmt       # コード整形 (cargo fmt)
+make lint      # clippy チェック
+make check     # fmt → lint → test 一括実行
+make ci        # CI 再現 (fmt --check → clippy → test → build --release)
+make test      # コンテナ内で cargo test
+make build     # コンテナ内で cargo build
+make run       # サーバーをバックグラウンドで起動
+make stop      # 実行中のサーバーを停止
+make clean     # ビルド成果物を削除
+make port      # サーバーのホスト側ポートを表示
+make shell     # devcontainer 内でシェルを開く
+make exec      # 任意コマンド実行 (例: make exec CMD="cargo clippy")
 ```
 
 git worktreeで複数コンテナを同時起動可能。コンテナ名は `cekernel-<フォルダ名>` で一意になる。
