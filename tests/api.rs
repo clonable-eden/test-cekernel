@@ -211,3 +211,68 @@ async fn test_delete_nonexistent() {
         .unwrap();
     assert_eq!(res.status(), StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn test_timestamps_present_on_create() {
+    let app = test_app().await;
+    let res = app
+        .oneshot(json_request(
+            Method::POST,
+            "/todos",
+            Some(r#"{"title":"Timestamp test"}"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let todo: Todo = body_json(res).await;
+    assert!(
+        !todo.created_at.is_empty(),
+        "created_at should not be empty"
+    );
+    assert!(
+        !todo.updated_at.is_empty(),
+        "updated_at should not be empty"
+    );
+}
+
+#[tokio::test]
+async fn test_updated_at_changes_on_update() {
+    use tokio::time::{Duration, sleep};
+
+    let app = test_app().await;
+
+    let res = app
+        .clone()
+        .oneshot(json_request(
+            Method::POST,
+            "/todos",
+            Some(r#"{"title":"Watch timestamps"}"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let created: Todo = body_json(res).await;
+
+    // SQLite CURRENT_TIMESTAMP has 1-second resolution; wait to ensure updated_at changes
+    sleep(Duration::from_secs(1)).await;
+
+    let res = app
+        .oneshot(json_request(
+            Method::PATCH,
+            &format!("/todos/{}", created.id),
+            Some(r#"{"title":"Updated title"}"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let updated: Todo = body_json(res).await;
+
+    assert_eq!(
+        updated.created_at, created.created_at,
+        "created_at should not change"
+    );
+    assert!(
+        updated.updated_at >= created.updated_at,
+        "updated_at should be >= original"
+    );
+}

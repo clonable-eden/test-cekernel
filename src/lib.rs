@@ -15,7 +15,9 @@ pub async fn setup_db(pool: &SqlitePool) {
         "CREATE TABLE IF NOT EXISTS todos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
-            completed BOOLEAN NOT NULL DEFAULT FALSE
+            completed BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )",
     )
     .execute(pool)
