@@ -276,3 +276,68 @@ async fn test_updated_at_changes_on_update() {
         "updated_at should be >= original"
     );
 }
+
+#[tokio::test]
+async fn test_create_with_content() {
+    let app = test_app().await;
+    let res = app
+        .oneshot(json_request(
+            Method::POST,
+            "/todos",
+            Some(r#"{"title":"With content","content":"Detailed description"}"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let todo: Todo = body_json(res).await;
+    assert_eq!(todo.title, "With content");
+    assert_eq!(todo.content, "Detailed description");
+}
+
+#[tokio::test]
+async fn test_create_without_content_defaults_to_empty() {
+    let app = test_app().await;
+    let res = app
+        .oneshot(json_request(
+            Method::POST,
+            "/todos",
+            Some(r#"{"title":"No content"}"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let todo: Todo = body_json(res).await;
+    assert_eq!(todo.title, "No content");
+    assert_eq!(todo.content, "");
+}
+
+#[tokio::test]
+async fn test_update_content() {
+    let app = test_app().await;
+
+    let res = app
+        .clone()
+        .oneshot(json_request(
+            Method::POST,
+            "/todos",
+            Some(r#"{"title":"Update me","content":"Original content"}"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let created: Todo = body_json(res).await;
+    assert_eq!(created.content, "Original content");
+
+    let res = app
+        .oneshot(json_request(
+            Method::PATCH,
+            &format!("/todos/{}", created.id),
+            Some(r#"{"content":"Updated content"}"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let updated: Todo = body_json(res).await;
+    assert_eq!(updated.content, "Updated content");
+    assert_eq!(updated.title, "Update me");
+}
