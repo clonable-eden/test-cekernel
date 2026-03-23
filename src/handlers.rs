@@ -13,12 +13,7 @@ use crate::models::{CreateTodo, CreateTodoForm, Todo, UpdateTodo};
 pub type AppState = Arc<SqlitePool>;
 
 pub async fn list_todos(State(pool): State<AppState>) -> Result<Json<Vec<Todo>>, StatusCode> {
-    let todos = sqlx::query_as::<_, Todo>(
-        "SELECT id, title, content, completed, created_at, updated_at FROM todos ORDER BY id",
-    )
-    .fetch_all(pool.as_ref())
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let todos = fetch_todos(pool.as_ref()).await?;
     Ok(Json(todos))
 }
 
@@ -114,9 +109,7 @@ async fn fetch_todos(pool: &SqlitePool) -> Result<Vec<Todo>, StatusCode> {
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
-pub async fn index_page(State(pool): State<AppState>) -> Result<Html<String>, StatusCode> {
-    let todos = fetch_todos(pool.as_ref()).await?;
-    let template = IndexTemplate { todos };
+fn render_html(template: &impl Template) -> Result<Html<String>, StatusCode> {
     Ok(Html(
         template
             .render()
@@ -124,25 +117,23 @@ pub async fn index_page(State(pool): State<AppState>) -> Result<Html<String>, St
     ))
 }
 
+pub async fn index_page(State(pool): State<AppState>) -> Result<Html<String>, StatusCode> {
+    let todos = fetch_todos(pool.as_ref()).await?;
+    render_html(&IndexTemplate { todos })
+}
+
 pub async fn create_todo_html(
     State(pool): State<AppState>,
     Form(input): Form<CreateTodoForm>,
 ) -> Result<Html<String>, StatusCode> {
-    sqlx::query(
-        "INSERT INTO todos (title, content, completed) VALUES (?, '', FALSE)",
-    )
-    .bind(&input.title)
-    .execute(pool.as_ref())
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    sqlx::query("INSERT INTO todos (title, content, completed) VALUES (?, '', FALSE)")
+        .bind(&input.title)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let todos = fetch_todos(pool.as_ref()).await?;
-    let template = TodoListTemplate { todos };
-    Ok(Html(
-        template
-            .render()
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-    ))
+    render_html(&TodoListTemplate { todos })
 }
 
 pub async fn toggle_todo_html(
@@ -158,12 +149,7 @@ pub async fn toggle_todo_html(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     .ok_or(StatusCode::NOT_FOUND)?;
 
-    let template = TodoItemTemplate { todo };
-    Ok(Html(
-        template
-            .render()
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-    ))
+    render_html(&TodoItemTemplate { todo })
 }
 
 pub async fn delete_todo_html(
