@@ -22,3 +22,8 @@ pub struct UpdateTodo {
     pub content: Option<String>,
     pub completed: Option<bool>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct CreateTodoForm {
+    pub title: String,
+}

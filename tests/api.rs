@@ -20,6 +20,11 @@ async fn body_json<T: serde::de::DeserializeOwned>(response: axum::response::Res
     serde_json::from_slice(&body).unwrap()
 }
 
+async fn body_string(response: axum::response::Response) -> String {
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    String::from_utf8(body.to_vec()).unwrap()
+}
+
 fn json_request(method: Method, uri: &str, body: Option<&str>) -> Request<Body> {
     let mut builder = Request::builder().method(method).uri(uri);
     if body.is_some() {
@@ -340,4 +345,164 @@ async fn test_update_content() {
     let updated: Todo = body_json(res).await;
     assert_eq!(updated.content, "Updated content");
     assert_eq!(updated.title, "Update me");
+}
+
+// ---- HTML Frontend Tests ----
+
+#[tokio::test]
+async fn test_index_returns_html() {
+    let app = test_app().await;
+    let res = app
+        .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let content_type = res
+        .headers()
+        .get("content-type")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let body = body_string(res).await;
+    assert!(
+        content_type.contains("text/html"),
+        "Expected text/html, got {content_type}"
+    );
+    assert!(body.contains("<html"), "Body should contain <html");
+    assert!(body.contains("htmx"), "Body should reference htmx");
+    assert!(body.contains("mvp.css"), "Body should reference mvp.css");
+}
+
+#[tokio::test]
+async fn test_index_shows_existing_todos() {
+    let app = test_app().await;
+
+    // Create a todo via JSON API
+    let res = app
+        .clone()
+        .oneshot(json_request(
+            Method::POST,
+            "/todos",
+            Some(r#"{"title":"Visible todo"}"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+
+    // GET / should show the todo
+    let res = app
+        .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = body_string(res).await;
+    assert!(
+        body.contains("Visible todo"),
+        "Index page should show existing todos"
+    );
+}
+
+#[tokio::test]
+async fn test_create_todo_html() {
+    let app = test_app().await;
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/")
+                .header("content-type", "application/x-www-form-urlencoded")
+                .body(Body::from("title=New+html+todo"))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = body_string(res).await;
+    assert!(
+        body.contains("New html todo"),
+        "Response should contain the created todo"
+    );
+}
+
+#[tokio::test]
+async fn test_toggle_todo_html() {
+    let app = test_app().await;
+
+    // Create todo via JSON API
+    let res = app
+        .clone()
+        .oneshot(json_request(
+            Method::POST,
+            "/todos",
+            Some(r#"{"title":"Toggle me"}"#),
+        ))
+        .await
+        .unwrap();
+    let todo: Todo = body_json(res).await;
+    assert!(!todo.completed);
+
+    // Toggle via HTML endpoint
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("/todos/{}/toggle", todo.id))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = body_string(res).await;
+    assert!(
+        body.contains("Toggle me"),
+        "Response should contain the todo title"
+    );
+    assert!(
+        body.contains("checked"),
+        "Toggled todo should be marked as checked"
+    );
+}
+
+#[tokio::test]
+async fn test_delete_todo_html() {
+    let app = test_app().await;
+
+    // Create todo via JSON API
+    let res = app
+        .clone()
+        .oneshot(json_request(
+            Method::POST,
+            "/todos",
+            Some(r#"{"title":"Delete me html"}"#),
+        ))
+        .await
+        .unwrap();
+    let todo: Todo = body_json(res).await;
+
+    // Delete via HTML endpoint
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri(&format!("/todos/{}/delete", todo.id))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+
+    // Verify todo is deleted via JSON API
+    let res = app
+        .oneshot(json_request(Method::GET, "/todos", None))
+        .await
+        .unwrap();
+    let todos: Vec<Todo> = body_json(res).await;
+    assert!(
+        todos.is_empty(),
+        "Todo should be deleted after HTML delete endpoint"
+    );
 }
