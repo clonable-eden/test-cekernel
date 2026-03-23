@@ -34,9 +34,11 @@ git worktreeで複数コンテナを同時起動可能。コンテナ名は `cek
 
 ## Development Process (TDD)
 
-1. **RED**: テストを書く → `make test` で失敗を確認
-2. **GREEN**: 最小限の実装 → `make test` でパス
-3. **REFACTOR**: リファクタ → `make check` で全チェック（fmt + lint + test）
+各ステップで必ずコミットすること。コミットメッセージ末尾に TDD ステップを示すサフィックスを付ける。
+
+1. **RED**: テストを書く → `make test` で失敗を確認 → コミット (`test: <説明> (RED)`)
+2. **GREEN**: 最小限の実装 → `make test` でパス → コミット (`feat: <説明> (GREEN)` または `fix: <説明> (GREEN)`)
+3. **REFACTOR**: リファクタ → `make check` で全チェック（fmt + lint + test） → コミット (`refactor: <説明> (REFACTOR)`)（変更がある場合）
 4. **PR前**: `make ci` でCI再現確認
 
 ### Worker ライフサイクル
