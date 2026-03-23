@@ -2,6 +2,6 @@
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "devDependencies": {
-    "@devcontainers/cli": "0.84.0"
+    "@devcontainers/cli": "0.84.1"
   }
 }
