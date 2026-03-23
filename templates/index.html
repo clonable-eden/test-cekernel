@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODO List</title>
+    <link rel="stylesheet" href="/static/mvp.css">
+    <script src="/static/htmx.min.js"></script>
+    <style>
+        .completed label { text-decoration: line-through; opacity: 0.6; }
+        form[hx-post] { display: flex; gap: 0.5rem; align-items: center; }
+        form[hx-post] input[type="text"] { flex: 1; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>TODO List</h1>
+    </header>
+    <main>
+        <section>
+            <form hx-post="/" hx-target="#todo-list" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful) this.reset()">
+                <input type="text" name="title" placeholder="New todo..." required>
+                <button type="submit">Add</button>
+            </form>
+        </section>
+        <section>
+            <ul id="todo-list">
+                {% for todo in todos %}
+                <li id="todo-{{ todo.id }}" class="{% if todo.completed %}completed{% endif %}">
+                    <label>
+                        <input type="checkbox"
+                               {% if todo.completed %}checked{% endif %}
+                               hx-post="/todos/{{ todo.id }}/toggle"
+                               hx-target="#todo-{{ todo.id }}"
+                               hx-swap="outerHTML">
+                        {{ todo.title }}
+                    </label>
+                    <button hx-post="/todos/{{ todo.id }}/delete"
+                            hx-target="#todo-{{ todo.id }}"
+                            hx-swap="outerHTML">Delete</button>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+    </main>
+</body>
+</html>
