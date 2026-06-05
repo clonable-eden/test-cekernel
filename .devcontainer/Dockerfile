@@ -1,4 +1,4 @@
-FROM rust:1.95-slim-bookworm
+FROM rust:1.96-slim-bookworm
 
 RUN apt-get update && apt-get install -y \
     pkg-config libssl-dev curl git sqlite3 procps make \
