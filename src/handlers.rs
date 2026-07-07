@@ -1,13 +1,14 @@
 use askama::Template;
 use axum::{
     Form, Json,
-    extract::{Path, State},
+    extract::{Path, State, rejection::JsonRejection},
     http::StatusCode,
     response::Html,
 };
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
+use crate::errors::AppError;
 use crate::models::{CreateTodo, CreateTodoForm, Todo, UpdateTodo};
 
 pub type AppState = Arc<SqlitePool>;
@@ -27,15 +28,16 @@ pub async fn health_check(
     }
 }
 
-pub async fn list_todos(State(pool): State<AppState>) -> Result<Json<Vec<Todo>>, StatusCode> {
-    let todos = fetch_todos(&pool).await?;
+pub async fn list_todos(State(pool): State<AppState>) -> Result<Json<Vec<Todo>>, AppError> {
+    let todos = fetch_all_todos(&pool).await?;
     Ok(Json(todos))
 }
 
 pub async fn create_todo(
     State(pool): State<AppState>,
-    Json(input): Json<CreateTodo>,
-) -> Result<(StatusCode, Json<Todo>), StatusCode> {
+    body: Result<Json<CreateTodo>, JsonRejection>,
+) -> Result<(StatusCode, Json<Todo>), AppError> {
+    let Json(input) = body?;
     let content = input.content.unwrap_or_default();
     let todo = sqlx::query_as::<_, Todo>(
         "INSERT INTO todos (title, content, completed) VALUES (?, ?, FALSE) RETURNING id, title, content, completed, created_at, updated_at",
@@ -46,7 +48,7 @@ pub async fn create_todo(
     .await
     .map_err(|e| {
         tracing::error!(error = %e, "Failed to create todo");
-        StatusCode::INTERNAL_SERVER_ERROR
+        AppError::Internal(e.to_string())
     })?;
     Ok((StatusCode::CREATED, Json(todo)))
 }
@@ -54,8 +56,9 @@ pub async fn create_todo(
 pub async fn update_todo(
     State(pool): State<AppState>,
     Path(id): Path<i64>,
-    Json(input): Json<UpdateTodo>,
-) -> Result<Json<Todo>, StatusCode> {
+    body: Result<Json<UpdateTodo>, JsonRejection>,
+) -> Result<Json<Todo>, AppError> {
+    let Json(input) = body?;
     let existing = sqlx::query_as::<_, Todo>(
         "SELECT id, title, content, completed, created_at, updated_at FROM todos WHERE id = ?",
     )
@@ -64,9 +67,9 @@ pub async fn update_todo(
     .await
     .map_err(|e| {
         tracing::error!(error = %e, id, "Failed to fetch todo for update");
-        StatusCode::INTERNAL_SERVER_ERROR
+        AppError::Internal(e.to_string())
     })?
-    .ok_or(StatusCode::NOT_FOUND)?;
+    .ok_or_else(|| AppError::NotFound("not found".to_string()))?;
 
     let title = input.title.unwrap_or(existing.title);
     let content = input.content.unwrap_or(existing.content);
@@ -83,7 +86,7 @@ pub async fn update_todo(
     .await
     .map_err(|e| {
         tracing::error!(error = %e, id, "Failed to update todo");
-        StatusCode::INTERNAL_SERVER_ERROR
+        AppError::Internal(e.to_string())
     })?;
     Ok(Json(todo))
 }
@@ -91,18 +94,18 @@ pub async fn update_todo(
 pub async fn delete_todo(
     State(pool): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<StatusCode, StatusCode> {
+) -> Result<StatusCode, AppError> {
     let result = sqlx::query("DELETE FROM todos WHERE id = ?")
         .bind(id)
         .execute(pool.as_ref())
         .await
         .map_err(|e| {
             tracing::error!(error = %e, id, "Failed to delete todo");
-            StatusCode::INTERNAL_SERVER_ERROR
+            AppError::Internal(e.to_string())
         })?;
 
     if result.rows_affected() == 0 {
-        return Err(StatusCode::NOT_FOUND);
+        return Err(AppError::NotFound("not found".to_string()));
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -127,7 +130,7 @@ struct TodoItemTemplate {
     todo: Todo,
 }
 
-async fn fetch_todos(pool: &SqlitePool) -> Result<Vec<Todo>, StatusCode> {
+async fn fetch_all_todos(pool: &SqlitePool) -> Result<Vec<Todo>, AppError> {
     sqlx::query_as::<_, Todo>(
         "SELECT id, title, content, completed, created_at, updated_at FROM todos ORDER BY id",
     )
@@ -135,43 +138,43 @@ async fn fetch_todos(pool: &SqlitePool) -> Result<Vec<Todo>, StatusCode> {
     .await
     .map_err(|e| {
         tracing::error!(error = %e, "Failed to fetch todos");
-        StatusCode::INTERNAL_SERVER_ERROR
+        AppError::Internal(e.to_string())
     })
 }
 
-fn render_html(template: &impl Template) -> Result<Html<String>, StatusCode> {
+fn render_html(template: &impl Template) -> Result<Html<String>, AppError> {
     Ok(Html(template.render().map_err(|e| {
         tracing::error!(error = %e, "Failed to render template");
-        StatusCode::INTERNAL_SERVER_ERROR
+        AppError::Internal(e.to_string())
     })?))
 }
 
-pub async fn index_page(State(pool): State<AppState>) -> Result<Html<String>, StatusCode> {
-    let todos = fetch_todos(pool.as_ref()).await?;
+pub async fn index_page(State(pool): State<AppState>) -> Result<Html<String>, AppError> {
+    let todos = fetch_all_todos(pool.as_ref()).await?;
     render_html(&IndexTemplate { todos })
 }
 
 pub async fn create_todo_html(
     State(pool): State<AppState>,
     Form(input): Form<CreateTodoForm>,
-) -> Result<Html<String>, StatusCode> {
+) -> Result<Html<String>, AppError> {
     sqlx::query("INSERT INTO todos (title, content, completed) VALUES (?, '', FALSE)")
         .bind(&input.title)
         .execute(pool.as_ref())
         .await
         .map_err(|e| {
             tracing::error!(error = %e, "Failed to create todo (HTML)");
-            StatusCode::INTERNAL_SERVER_ERROR
+            AppError::Internal(e.to_string())
         })?;
 
-    let todos = fetch_todos(pool.as_ref()).await?;
+    let todos = fetch_all_todos(pool.as_ref()).await?;
     render_html(&TodoListTemplate { todos })
 }
 
 pub async fn toggle_todo_html(
     State(pool): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Html<String>, StatusCode> {
+) -> Result<Html<String>, AppError> {
     let todo = sqlx::query_as::<_, Todo>(
         "UPDATE todos SET completed = NOT completed, updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING id, title, content, completed, created_at, updated_at",
     )
@@ -180,9 +183,9 @@ pub async fn toggle_todo_html(
     .await
     .map_err(|e| {
         tracing::error!(error = %e, id, "Failed to toggle todo");
-        StatusCode::INTERNAL_SERVER_ERROR
+        AppError::Internal(e.to_string())
     })?
-    .ok_or(StatusCode::NOT_FOUND)?;
+    .ok_or_else(|| AppError::NotFound("not found".to_string()))?;
 
     render_html(&TodoItemTemplate { todo })
 }
@@ -190,18 +193,18 @@ pub async fn toggle_todo_html(
 pub async fn delete_todo_html(
     State(pool): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Html<String>, StatusCode> {
+) -> Result<Html<String>, AppError> {
     let result = sqlx::query("DELETE FROM todos WHERE id = ?")
         .bind(id)
         .execute(pool.as_ref())
         .await
         .map_err(|e| {
             tracing::error!(error = %e, id, "Failed to delete todo (HTML)");
-            StatusCode::INTERNAL_SERVER_ERROR
+            AppError::Internal(e.to_string())
         })?;
 
     if result.rows_affected() == 0 {
-        return Err(StatusCode::NOT_FOUND);
+        return Err(AppError::NotFound("not found".to_string()));
     }
     Ok(Html(String::new()))
 }

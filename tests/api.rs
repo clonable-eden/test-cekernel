@@ -9,6 +9,12 @@ use tracing_subscriber::layer::SubscriberExt;
 
 use test_cekernel::{Todo, app, setup_db};
 
+/// Helper to parse an error response body as `{ "error": "..." }`.
+async fn body_error(response: axum::response::Response) -> String {
+    let body: serde_json::Value = body_json(response).await;
+    body["error"].as_str().unwrap().to_string()
+}
+
 async fn test_app() -> Router {
     let pool = SqlitePool::connect("sqlite::memory:")
         .await
@@ -515,42 +521,110 @@ async fn test_delete_todo_html() {
     );
 }
 
-// ---- Health Check Tests ----
+// ---- Structured Error Response Tests ----
 
 #[tokio::test]
-async fn test_health_ok() {
+async fn test_create_invalid_json_returns_400_json() {
     let app = test_app().await;
     let res = app
-        .oneshot(json_request(Method::GET, "/health", None))
+        .oneshot(json_request(
+            Method::POST,
+            "/todos",
+            Some(r#"{"not_a_field": 123}"#),
+        ))
         .await
         .unwrap();
-    assert_eq!(res.status(), StatusCode::OK);
-    let body: serde_json::Value = body_json(res).await;
-    assert_eq!(body["status"], "ok");
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    let error_msg = body_error(res).await;
+    assert!(!error_msg.is_empty(), "Error message should not be empty");
 }
 
 #[tokio::test]
-async fn test_health_unhealthy() {
+async fn test_create_malformed_json_returns_400_json() {
+    let app = test_app().await;
+    let res = app
+        .oneshot(json_request(Method::POST, "/todos", Some(r#"{invalid"#)))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    let error_msg = body_error(res).await;
+    assert!(!error_msg.is_empty(), "Error message should not be empty");
+}
+
+#[tokio::test]
+async fn test_update_nonexistent_returns_404_json() {
+    let app = test_app().await;
+    let res = app
+        .oneshot(json_request(
+            Method::PATCH,
+            "/todos/999",
+            Some(r#"{"title":"Nope"}"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::NOT_FOUND);
+    let error_msg = body_error(res).await;
+    assert_eq!(error_msg, "not found");
+}
+
+#[tokio::test]
+async fn test_delete_nonexistent_returns_404_json() {
+    let app = test_app().await;
+    let res = app
+        .oneshot(json_request(Method::DELETE, "/todos/999", None))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::NOT_FOUND);
+    let error_msg = body_error(res).await;
+    assert_eq!(error_msg, "not found");
+}
+
+#[tokio::test]
+async fn test_db_error_returns_500_json() {
     let pool = SqlitePool::connect("sqlite::memory:")
         .await
         .expect("Failed to connect");
     setup_db(&pool).await;
     let router = app(pool.clone());
-
-    // Close the pool to simulate DB failure
     pool.close().await;
 
     let res = router
-        .oneshot(json_request(Method::GET, "/health", None))
+        .oneshot(json_request(Method::GET, "/todos", None))
         .await
         .unwrap();
-    assert_eq!(res.status(), StatusCode::SERVICE_UNAVAILABLE);
-    let body: serde_json::Value = body_json(res).await;
-    assert_eq!(body["status"], "unhealthy");
-    assert!(
-        body["error"].as_str().is_some(),
-        "error field should be present"
-    );
+    assert_eq!(res.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let error_msg = body_error(res).await;
+    assert_eq!(error_msg, "internal server error");
+}
+
+#[tokio::test]
+async fn test_update_invalid_json_returns_400_json() {
+    let app = test_app().await;
+
+    // Create a todo first
+    let res = app
+        .clone()
+        .oneshot(json_request(
+            Method::POST,
+            "/todos",
+            Some(r#"{"title":"Test"}"#),
+        ))
+        .await
+        .unwrap();
+    let todo: Todo = body_json(res).await;
+
+    // Send invalid JSON to update
+    let res = app
+        .oneshot(json_request(
+            Method::PATCH,
+            &format!("/todos/{}", todo.id),
+            Some(r#"{bad json"#),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    let error_msg = body_error(res).await;
+    assert!(!error_msg.is_empty(), "Error message should not be empty");
 }
 
 // ---- Tracing Tests ----
