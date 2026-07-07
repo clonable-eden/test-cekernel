@@ -3,8 +3,8 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
 use sqlx::SqlitePool;
-use tower::ServiceExt;
 use std::sync::{Arc as StdArc, Mutex};
+use tower::ServiceExt;
 use tracing_subscriber::layer::SubscriberExt;
 
 use test_cekernel::{Todo, app, setup_db};
@@ -566,7 +566,8 @@ async fn test_db_error_is_logged() {
     // Verify that the error was logged via tracing
     let logs = log_buf.lock().unwrap();
     assert!(
-        logs.iter().any(|l| l.contains("ERROR") && l.contains("Failed to fetch todos")),
+        logs.iter()
+            .any(|l| l.contains("ERROR") && l.contains("Failed to fetch todos")),
         "Expected ERROR log containing 'Failed to fetch todos', got: {:?}",
         *logs
     );

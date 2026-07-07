@@ -125,14 +125,10 @@ async fn fetch_todos(pool: &SqlitePool) -> Result<Vec<Todo>, StatusCode> {
 }
 
 fn render_html(template: &impl Template) -> Result<Html<String>, StatusCode> {
-    Ok(Html(
-        template
-            .render()
-            .map_err(|e| {
-                tracing::error!(error = %e, "Failed to render template");
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?,
-    ))
+    Ok(Html(template.render().map_err(|e| {
+        tracing::error!(error = %e, "Failed to render template");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?))
 }
 
 pub async fn index_page(State(pool): State<AppState>) -> Result<Html<String>, StatusCode> {
