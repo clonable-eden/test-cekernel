@@ -26,6 +26,9 @@ jobs:
             dev.mk
             Makefile
             .github/workflows/**
+            templates/**
+            static/**
+            rust-toolchain.toml
 
   check:
     needs: changes
@@ -51,6 +54,9 @@ jobs:
 
       - name: build
         run: make -f dev.mk build-release
+
+      - name: security audit
+        run: cargo install cargo-audit --locked && cargo audit
 
   gate:
     needs: check
