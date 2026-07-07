@@ -52,6 +52,9 @@ jobs:
       - name: build
         run: make -f dev.mk build-release
 
+      - name: security audit
+        run: cargo install cargo-audit --locked && cargo audit
+
   gate:
     needs: check
     if: always()
