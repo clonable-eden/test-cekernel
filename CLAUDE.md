@@ -63,6 +63,7 @@ make up → TDD サイクル (RED → GREEN → REFACTOR) → make ci → PR作�
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | /health | ヘルスチェック (`{"status":"ok"}` or `503 {"status":"unhealthy","error":"..."}`) |
 | GET | /todos | 一覧取得 |
 | POST | /todos | 作成 (`{"title": "..."}`) |
 | PATCH | /todos/:id | 更新 (`{"title": "...", "completed": true}`) |
