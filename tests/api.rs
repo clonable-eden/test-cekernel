@@ -4,6 +4,7 @@ use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
 use sqlx::SqlitePool;
 use tower::ServiceExt;
+use tracing_test::traced_test;
 
 use test_cekernel::{Todo, app, setup_db};
 
@@ -505,4 +506,29 @@ async fn test_delete_todo_html() {
         todos.is_empty(),
         "Todo should be deleted after HTML delete endpoint"
     );
+}
+
+// ---- Tracing Tests ----
+
+#[tokio::test]
+#[traced_test]
+async fn test_db_error_is_logged() {
+    // Use a pool that will fail on query (closed pool)
+    let pool = SqlitePool::connect("sqlite::memory:")
+        .await
+        .expect("Failed to connect");
+    setup_db(&pool).await;
+    let router = app(pool.clone());
+
+    // Close the pool to force DB errors
+    pool.close().await;
+
+    let res = router
+        .oneshot(json_request(Method::GET, "/todos", None))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+    // Verify that the error was logged via tracing
+    assert!(logs_contain("ERROR"));
 }
