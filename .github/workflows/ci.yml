@@ -56,7 +56,9 @@ jobs:
         run: make -f dev.mk build-release
 
       - name: security audit
-        run: cargo install cargo-audit --locked && cargo audit
+        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   gate:
     needs: check
