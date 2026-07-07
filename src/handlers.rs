@@ -13,7 +13,7 @@ use crate::models::{CreateTodo, CreateTodoForm, Todo, UpdateTodo};
 pub type AppState = Arc<SqlitePool>;
 
 pub async fn list_todos(State(pool): State<AppState>) -> Result<Json<Vec<Todo>>, StatusCode> {
-    let todos = fetch_todos(pool.as_ref()).await?;
+    let todos = fetch_todos(&pool).await?;
     Ok(Json(todos))
 }
 
@@ -29,7 +29,10 @@ pub async fn create_todo(
     .bind(&content)
     .fetch_one(pool.as_ref())
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!(error = %e, "Failed to create todo");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     Ok((StatusCode::CREATED, Json(todo)))
 }
 
@@ -44,7 +47,10 @@ pub async fn update_todo(
     .bind(id)
     .fetch_optional(pool.as_ref())
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    .map_err(|e| {
+        tracing::error!(error = %e, id, "Failed to fetch todo for update");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
     .ok_or(StatusCode::NOT_FOUND)?;
 
     let title = input.title.unwrap_or(existing.title);
@@ -60,7 +66,10 @@ pub async fn update_todo(
     .bind(id)
     .fetch_one(pool.as_ref())
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!(error = %e, id, "Failed to update todo");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     Ok(Json(todo))
 }
 
@@ -72,7 +81,10 @@ pub async fn delete_todo(
         .bind(id)
         .execute(pool.as_ref())
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!(error = %e, id, "Failed to delete todo");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     if result.rows_affected() == 0 {
         return Err(StatusCode::NOT_FOUND);
@@ -106,15 +118,17 @@ async fn fetch_todos(pool: &SqlitePool) -> Result<Vec<Todo>, StatusCode> {
     )
     .fetch_all(pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    .map_err(|e| {
+        tracing::error!(error = %e, "Failed to fetch todos");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })
 }
 
 fn render_html(template: &impl Template) -> Result<Html<String>, StatusCode> {
-    Ok(Html(
-        template
-            .render()
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-    ))
+    Ok(Html(template.render().map_err(|e| {
+        tracing::error!(error = %e, "Failed to render template");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?))
 }
 
 pub async fn index_page(State(pool): State<AppState>) -> Result<Html<String>, StatusCode> {
@@ -130,7 +144,10 @@ pub async fn create_todo_html(
         .bind(&input.title)
         .execute(pool.as_ref())
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!(error = %e, "Failed to create todo (HTML)");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     let todos = fetch_todos(pool.as_ref()).await?;
     render_html(&TodoListTemplate { todos })
@@ -146,7 +163,10 @@ pub async fn toggle_todo_html(
     .bind(id)
     .fetch_optional(pool.as_ref())
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    .map_err(|e| {
+        tracing::error!(error = %e, id, "Failed to toggle todo");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
     .ok_or(StatusCode::NOT_FOUND)?;
 
     render_html(&TodoItemTemplate { todo })
@@ -160,7 +180,10 @@ pub async fn delete_todo_html(
         .bind(id)
         .execute(pool.as_ref())
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!(error = %e, id, "Failed to delete todo (HTML)");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     if result.rows_affected() == 0 {
         return Err(StatusCode::NOT_FOUND);
