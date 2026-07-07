@@ -4,7 +4,8 @@ use axum::http::{Method, Request, StatusCode};
 use http_body_util::BodyExt;
 use sqlx::SqlitePool;
 use tower::ServiceExt;
-use tracing_test::traced_test;
+use std::sync::{Arc as StdArc, Mutex};
+use tracing_subscriber::layer::SubscriberExt;
 
 use test_cekernel::{Todo, app, setup_db};
 
@@ -510,9 +511,42 @@ async fn test_delete_todo_html() {
 
 // ---- Tracing Tests ----
 
+/// A tracing layer that records event messages to a shared buffer.
+struct EventCapture {
+    buf: StdArc<Mutex<Vec<String>>>,
+}
+
+impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for EventCapture {
+    fn on_event(
+        &self,
+        event: &tracing::Event<'_>,
+        _ctx: tracing_subscriber::layer::Context<'_, S>,
+    ) {
+        use tracing::field::Visit;
+        struct MsgVisitor(String);
+        impl Visit for MsgVisitor {
+            fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+                if field.name() == "message" {
+                    self.0 = format!("{:?}", value);
+                }
+            }
+        }
+        let mut visitor = MsgVisitor(String::new());
+        event.record(&mut visitor);
+        let level = *event.metadata().level();
+        let entry = format!("[{}] {}", level, visitor.0);
+        self.buf.lock().unwrap().push(entry);
+    }
+}
+
 #[tokio::test]
-#[traced_test]
 async fn test_db_error_is_logged() {
+    let log_buf: StdArc<Mutex<Vec<String>>> = StdArc::new(Mutex::new(Vec::new()));
+    let subscriber = tracing_subscriber::registry().with(EventCapture {
+        buf: log_buf.clone(),
+    });
+    let _guard = tracing::subscriber::set_default(subscriber);
+
     // Use a pool that will fail on query (closed pool)
     let pool = SqlitePool::connect("sqlite::memory:")
         .await
@@ -530,5 +564,10 @@ async fn test_db_error_is_logged() {
     assert_eq!(res.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
     // Verify that the error was logged via tracing
-    assert!(logs_contain("ERROR"));
+    let logs = log_buf.lock().unwrap();
+    assert!(
+        logs.iter().any(|l| l.contains("ERROR") && l.contains("Failed to fetch todos")),
+        "Expected ERROR log containing 'Failed to fetch todos', got: {:?}",
+        *logs
+    );
 }

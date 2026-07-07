@@ -8,6 +8,7 @@ use axum::{Router, routing::get};
 use sqlx::SqlitePool;
 use std::sync::Arc;
 use tower_http::services::ServeDir;
+use tower_http::trace::TraceLayer;
 
 use handlers::{
     create_todo, create_todo_html, delete_todo, delete_todo_html, index_page, list_todos,
@@ -42,5 +43,6 @@ pub fn app(pool: SqlitePool) -> Router {
         .route("/todos/{id}/toggle", axum::routing::post(toggle_todo_html))
         .route("/todos/{id}/delete", axum::routing::post(delete_todo_html))
         .nest_service("/static", ServeDir::new("static"))
+        .layer(TraceLayer::new_for_http())
         .with_state(state)
 }

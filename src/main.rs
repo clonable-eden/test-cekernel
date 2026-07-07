@@ -5,6 +5,8 @@ use test_cekernel::{app, setup_db};
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::init();
+
     let options = SqliteConnectOptions::from_str("sqlite:todos.db")
         .expect("Invalid database URL")
         .create_if_missing(true);
@@ -19,7 +21,7 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .expect("Failed to bind");
-    println!("Listening on http://{addr}");
+    tracing::info!("Listening on http://{addr}");
     axum::serve(listener, app(pool))
         .await
         .expect("Server failed");
