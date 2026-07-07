@@ -11,8 +11,8 @@ use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 
 use handlers::{
-    create_todo, create_todo_html, delete_todo, delete_todo_html, index_page, list_todos,
-    toggle_todo_html, update_todo,
+    create_todo, create_todo_html, delete_todo, delete_todo_html, health_check, index_page,
+    list_todos, toggle_todo_html, update_todo,
 };
 
 pub async fn setup_db(pool: &SqlitePool) {
@@ -35,6 +35,7 @@ pub fn app(pool: SqlitePool) -> Router {
     let state: AppState = Arc::new(pool);
     Router::new()
         .route("/", get(index_page).post(create_todo_html))
+        .route("/health", get(health_check))
         .route("/todos", get(list_todos).post(create_todo))
         .route(
             "/todos/{id}",

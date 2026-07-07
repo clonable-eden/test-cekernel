@@ -12,6 +12,21 @@ use crate::models::{CreateTodo, CreateTodoForm, Todo, UpdateTodo};
 
 pub type AppState = Arc<SqlitePool>;
 
+pub async fn health_check(
+    State(pool): State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    match sqlx::query("SELECT 1").execute(pool.as_ref()).await {
+        Ok(_) => Ok(Json(serde_json::json!({"status": "ok"}))),
+        Err(e) => {
+            tracing::error!(error = %e, "Health check failed");
+            Err((
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({"status": "unhealthy", "error": e.to_string()})),
+            ))
+        }
+    }
+}
+
 pub async fn list_todos(State(pool): State<AppState>) -> Result<Json<Vec<Todo>>, StatusCode> {
     let todos = fetch_todos(&pool).await?;
     Ok(Json(todos))

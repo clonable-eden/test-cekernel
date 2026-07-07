@@ -515,6 +515,44 @@ async fn test_delete_todo_html() {
     );
 }
 
+// ---- Health Check Tests ----
+
+#[tokio::test]
+async fn test_health_ok() {
+    let app = test_app().await;
+    let res = app
+        .oneshot(json_request(Method::GET, "/health", None))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let body: serde_json::Value = body_json(res).await;
+    assert_eq!(body["status"], "ok");
+}
+
+#[tokio::test]
+async fn test_health_unhealthy() {
+    let pool = SqlitePool::connect("sqlite::memory:")
+        .await
+        .expect("Failed to connect");
+    setup_db(&pool).await;
+    let router = app(pool.clone());
+
+    // Close the pool to simulate DB failure
+    pool.close().await;
+
+    let res = router
+        .oneshot(json_request(Method::GET, "/health", None))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::SERVICE_UNAVAILABLE);
+    let body: serde_json::Value = body_json(res).await;
+    assert_eq!(body["status"], "unhealthy");
+    assert!(
+        body["error"].as_str().is_some(),
+        "error field should be present"
+    );
+}
+
 // ---- Tracing Tests ----
 
 /// A tracing layer that records event messages to a shared buffer.
