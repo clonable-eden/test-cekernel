@@ -55,8 +55,19 @@ jobs:
       - name: build
         run: make -f dev.mk build-release
 
+      - name: cache cargo-audit
+        id: cache-cargo-audit
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: cargo-audit-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: install cargo-audit
+        if: steps.cache-cargo-audit.outputs.cache-hit != 'true'
+        run: cargo install cargo-audit --locked
+
       - name: security audit
-        run: cargo install cargo-audit --locked && cargo audit
+        run: cargo audit
 
   gate:
     needs: check
