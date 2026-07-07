@@ -370,8 +370,14 @@ async fn test_index_returns_html() {
         "Expected text/html, got {content_type}"
     );
     assert!(body.contains("<html"), "Body should contain <html");
-    assert!(body.contains("htmx"), "Body should reference htmx");
-    assert!(body.contains("mvp.css"), "Body should reference mvp.css");
+    assert!(
+        body.contains("unpkg.com/htmx.org"),
+        "Body should reference htmx via CDN"
+    );
+    assert!(
+        body.contains("unpkg.com/mvp.css"),
+        "Body should reference mvp.css via CDN"
+    );
 }
 
 #[tokio::test]
