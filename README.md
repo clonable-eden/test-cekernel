@@ -1,6 +1,6 @@
 # test-cekernel
 
-[cekernel](https://github.com/clonable-eden/cekernel) の実証テスト用リポジトリ。Rust + Axum によるシンプルな TODO リスト REST API。
+[cekernel](https://github.com/clonable-eden/cekernel) の実証テスト用リポジトリ。Rust + Axum による HTMX フロントエンド付き TODO Web アプリ。
 
 ## Setup
 
@@ -18,12 +18,24 @@ make run     # サーバー起動 (http://localhost:3000)
 
 ## API
 
+### HTML/HTMX エンドポイント
+
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | / | TODO 一覧ページ（HTMX フロントエンド） |
+| POST | / | TODO 作成（フォーム送信、HTMX） |
+| POST | /todos/{id}/toggle | 完了状態トグル（HTMX） |
+| POST | /todos/{id}/delete | 削除（HTMX） |
+
+### REST API エンドポイント
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /health | ヘルスチェック (`{"status":"ok"}` or `503 {"status":"unhealthy","error":"..."}`) |
 | GET | /todos | 一覧取得 |
-| POST | /todos | 作成 (`{"title": "..."}`) |
-| PATCH | /todos/:id | 更新 (`{"title": "...", "completed": true}`) |
-| DELETE | /todos/:id | 削除 |
+| POST | /todos | 作成 (`{"title": "...", "content": "..."}`) |
+| PATCH | /todos/{id} | 更新 (`{"title": "...", "content": "...", "completed": true}`) |
+| DELETE | /todos/{id} | 削除 |
 
 ## Development
 
@@ -38,12 +50,20 @@ TDD アプローチで開発する。
 
 ```
 src/
-  main.rs        — エントリポイント（DB接続・サーバー起動）
+  main.rs        — エントリポイント（DB接続・サーバー起動・tracing初期化）
   lib.rs         — ルーター・DB初期化・re-exports
-  models.rs      — データモデル (Todo, CreateTodo, UpdateTodo)
-  handlers.rs    — CRUD ハンドラ
+  models.rs      — データモデル (Todo, CreateTodo, UpdateTodo, CreateTodoForm)
+  handlers.rs    — CRUD + HTMX ハンドラ
+  errors.rs      — エラー型 (AppError, ErrorResponse)
+templates/
+  index.html     — メインページテンプレート (Askama)
+  todo_item.html — TODO アイテム部分テンプレート
+  todo_list.html — TODO リスト部分テンプレート
 tests/
-  api.rs         — インテグレーションテスト
+  api.rs         — インテグレーションテスト（REST API・HTML・エラー応答・tracing）
+dev.mk           — 開発用 Makefile インクルード
+renovate.json    — Renovate 設定（依存自動更新）
+rust-toolchain.toml — Rust ツールチェーン指定
 ```
 
 ## License
