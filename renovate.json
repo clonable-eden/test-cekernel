@@ -8,7 +8,7 @@
   "minimumReleaseAge": "7 days",
   "packageRules": [
     {
-      "matchUpdateTypes": ["patch", "minor", "pinDigest"],
+      "matchUpdateTypes": ["patch", "minor", "pinDigest", "digest"],
       "automerge": true
     },
     {
@@ -18,6 +18,11 @@
     {
       "matchManagers": ["github-actions"],
       "groupName": "GitHub Actions"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["digest"],
+      "groupName": null
     }
   ]
 }
