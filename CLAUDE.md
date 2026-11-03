@@ -61,7 +61,8 @@ make up → TDD サイクル (RED → GREEN → REFACTOR) → make ci → PR作�
 - **DB**: SQLite ファイル (`todos.db`)。コンテナ内でのみ存在し、gitignore済み。マイグレーションは `setup_db()` でアプリ起動時に実行
 - **トレーシング**: `tracing` + `tower-http` TraceLayer でリクエストログを出力
 - **テスト**: `tests/api.rs` — インテグレーションテスト（REST API・HTMLレスポンス・エラー応答・tracing出力検証）。`sqlite::memory:` を使うためDBファイル不要
-- **CI**: GitHub Actions（`ci.yml`）— path-filtering（`changes` ジョブ）→ fmt → clippy → test → build → `cargo-audit`（`gate` ジョブで集約）
+- **CI**: GitHub Actions（`ci.yml`）— path-filtering（`changes` ジョブ）→ fmt → clippy → test → build → `cargo-audit`（`gate` ジョブで集約）。`verify-lockfile.yml` が `gh actions-lock --verify` で `actions.lock` を検証する
+- **Actions lockfile**: `.github/workflows/actions.lock` に全 action の commit を固定（`uses:` はタグ参照）。`uses:` を変更したら `gh actions-lock` で再生成し一緒にコミットする。Renovate は action 更新時に lockfile を自動再生成する
 
 ## API Endpoints
 
