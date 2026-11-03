@@ -5,6 +5,16 @@
     "config:recommended"
   ],
   "minimumReleaseAge": "7 days",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "gh extension install (?<depName>github/gh-actions-lock) --pin (?<currentValue>v?\\d+\\.\\d+\\.\\d+)"
+      ],
+      "datasourceTemplate": "github-releases"
+    }
+  ],
   "packageRules": [
     {
       "matchUpdateTypes": ["patch", "minor", "pinDigest", "digest"],
@@ -17,6 +27,10 @@
     {
       "matchManagers": ["github-actions"],
       "groupName": "GitHub Actions"
+    },
+    {
+      "matchDepNames": ["github/gh-actions-lock"],
+      "automerge": false
     }
   ]
 }
