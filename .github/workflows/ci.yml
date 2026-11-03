@@ -16,7 +16,7 @@ jobs:
       src: ${{ steps.filter.outputs.any_modified }}
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: tj-actions/changed-files@v47.0.0
+      - uses: tj-actions/changed-files@v47.0.6
         id: filter
         with:
           files: |
@@ -42,7 +42,7 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
-      - uses: Swatinem/rust-cache@v2.9.2
+      - uses: Swatinem/rust-cache@v2.9.3
 
       - name: fmt-check
         run: make -f dev.mk fmt-check
