@@ -167,16 +167,16 @@ importers:
   .:
     devDependencies:
       '@devcontainers/cli':
-        specifier: 0.89.0
-        version: 0.89.0
+        specifier: 0.90.0
+        version: 0.90.0
 
 packages:
 
-  '@devcontainers/cli@0.89.0':
-    resolution: {integrity: sha512-LzaoOGKQ/Zql6PsiZ4hVIYVZagzWkD65aG/1ou5/Kly5Y1PtjLg1yn7qu+LZCzVoAl6DZZ/pbz8qOO4RLNlqMg==}
+  '@devcontainers/cli@0.90.0':
+    resolution: {integrity: sha512-A4ceztBMlNzd1MUlQNel0dWxnkDlE83+WsgS4JOZfeBkbO0QUKEzBpd3UQ7Xqf7s0KzJaAj+Udnp4E8I3oqK3w==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
 snapshots:
 
-  '@devcontainers/cli@0.89.0': {}
+  '@devcontainers/cli@0.90.0': {}
